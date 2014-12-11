@@ -30,6 +30,6 @@
     <string name="title_activity_main">OpenCV Face Detection</string>
     <string name="action_stop">Stop</string>
     <string name="action_facedet">Face Detection</string>
-    <string name="hello_world">Welcome!</string>
+    <string name="hello_world">Touch to start!</string>
 
 </resources>

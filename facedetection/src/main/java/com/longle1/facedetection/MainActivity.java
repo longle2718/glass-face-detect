@@ -28,15 +28,20 @@
 
 package com.longle1.facedetection;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -44,12 +49,17 @@ import org.opencv.objdetect.CascadeClassifier;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 import android.widget.Toast;
+
+import com.loopj.android.http.RequestParams;
 
 public class MainActivity extends Activity implements CvCameraViewListener2, GestureDetector.OnGestureListener {
 
@@ -66,7 +76,9 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
 
     private CameraBridgeViewBase   mOpenCvCameraView;
     
-    private GestureDetector mGestureDetector;
+    private GestureDetector        mGestureDetector;
+
+    private Looper                 mAsyncHttpLooper;
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -135,6 +147,13 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.fd_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
+
+        // Create looper for asyncHttp
+        HandlerThread thread2 = new HandlerThread("AsyncHttpResponseHandler",
+                android.os.Process.THREAD_PRIORITY_BACKGROUND);
+        thread2.start();
+
+        mAsyncHttpLooper = thread2.getLooper();
     }
 
     @Override
@@ -197,6 +216,37 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
         Rect[] facesArray = faces.toArray();
         for (int i = 0; i < facesArray.length; i++)
             Core.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+
+        // Send the raw image with face and metadata to the cloud
+        if (facesArray.length > 0){
+            // Convert from Mat to bitmap
+            Bitmap bitmap = Bitmap.createBitmap(mOpenCvCameraView.getWidth() / 4, mOpenCvCameraView.getHeight() / 4, Bitmap.Config.ARGB_8888);
+            try {
+                bitmap = Bitmap.createBitmap(mRgba.cols(), mRgba.rows(), Bitmap.Config.ARGB_8888);
+                Utils.matToBitmap(mRgba, bitmap);
+            }catch(Exception ex){
+                Log.e("ex", ex.getMessage());
+            }
+
+            // Convert from bitmap to byte array
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            byte[] byteArray = stream.toByteArray();
+
+            // Send the raw image data to the cloud
+            // *** send wave files
+            String targetURI = "https://acoustic.ifp.illinois.edu:8081";
+            String db = "publicDb";
+            RequestParams rpPut = new RequestParams();
+            rpPut.put("user", "publicUser");
+            rpPut.put("passwd", "publicPwd");
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // ISO8601 uses trailing Z
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+            String ts = sdf.format(new Date());
+            rpPut.put("filename", ts+".bmp"); // name file using time stamp
+            TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getBaseContext());
+            httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, byteArray);
+        }
 
         return mRgba;
     }
