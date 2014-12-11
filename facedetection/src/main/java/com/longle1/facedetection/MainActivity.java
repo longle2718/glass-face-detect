@@ -259,9 +259,10 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
             } catch (JSONException e){
                 e.printStackTrace();
             }
+            // putting it together
             JSONObject json = new JSONObject();
             try{
-                json.put("filename", ts+".wav");
+                json.put("filename", ts+".bmp");
                 json.put("recordDate", recordDate);
             } catch (JSONException e) {
                 e.printStackTrace();
