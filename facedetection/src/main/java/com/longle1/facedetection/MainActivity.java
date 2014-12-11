@@ -37,6 +37,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
 import org.opencv.android.LoaderCallbackInterface;
@@ -79,6 +81,11 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
     private GestureDetector        mGestureDetector;
 
     private Looper                 mAsyncHttpLooper;
+
+    private String targetURI = "https://acoustic.ifp.illinois.edu:8081";
+    private String db = "publicDb";
+    private String dev = "publicUser";
+    private String pwd = "publicPwd";
 
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -233,19 +240,40 @@ public class MainActivity extends Activity implements CvCameraViewListener2, Ges
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
             byte[] byteArray = stream.toByteArray();
 
-            // Send the raw image data to the cloud
-            // *** send wave files
-            String targetURI = "https://acoustic.ifp.illinois.edu:8081";
-            String db = "publicDb";
+            // *** Send the raw image data to the cloud
             RequestParams rpPut = new RequestParams();
-            rpPut.put("user", "publicUser");
-            rpPut.put("passwd", "publicPwd");
+            rpPut.put("user", dev);
+            rpPut.put("passwd", pwd);
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // ISO8601 uses trailing Z
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             String ts = sdf.format(new Date());
             rpPut.put("filename", ts+".bmp"); // name file using time stamp
             TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getBaseContext());
             httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, byteArray);
+
+            // *** Send metadata
+            // prepare record date json
+            JSONObject recordDate = new JSONObject();
+            try{
+                recordDate.put("$date", ts);
+            } catch (JSONException e){
+                e.printStackTrace();
+            }
+            JSONObject json = new JSONObject();
+            try{
+                json.put("filename", ts+".wav");
+                json.put("recordDate", recordDate);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            RequestParams rpPost = new RequestParams();
+            rpPost.put("dbname", db);
+            rpPost.put("colname", "v_event");
+            rpPost.put("user", dev);
+            rpPost.put("passwd", pwd);
+            TimedAsyncHttpResponseHandler httpHandler2= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getBaseContext());
+            httpHandler2.executePut(targetURI+"/write", rpPost, json);
         }
 
         return mRgba;
