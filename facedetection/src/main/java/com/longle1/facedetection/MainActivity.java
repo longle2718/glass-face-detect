@@ -40,7 +40,6 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.RelativeLayout;
 
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.opencv_objdetect;
@@ -66,7 +65,7 @@ import static org.bytedeco.javacpp.opencv_objdetect.cvHaarDetectObjects;
 
 // ----------------------------------------------------------------------
 
-public class FacePreview extends Activity {
+public class MainActivity extends Activity {
     private FrameLayout layout;
     private FaceView mFaceView;
     private CameraPreview mCameraPreview;
@@ -79,12 +78,11 @@ public class FacePreview extends Activity {
         super.onCreate(savedInstanceState);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         // Create our Preview view and set it as the content of our activity.
         try {
             layout = new FrameLayout(this);
-            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(640, 360);
-            layout.setLayoutParams(lp);
             mFaceView = new FaceView(this);
             mCameraPreview = new CameraPreview(this, mFaceView);
             layout.addView(mCameraPreview);
@@ -107,7 +105,7 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvMemStorage storage;
     private CvSeq faces;
 
-    public FaceView(FacePreview context) throws IOException {
+    public FaceView(MainActivity context) throws IOException {
         super(context);
 
         // Create a private directory and file
@@ -175,7 +173,7 @@ class FaceView extends View implements Camera.PreviewCallback {
     @Override
     protected void onDraw(Canvas canvas) {
         Paint paint = new Paint();
-        paint.setColor(Color.RED);
+        paint.setColor(Color.GREEN);
         paint.setTextSize(20);
 
         String s = "FacePreview - This side up.";
@@ -183,7 +181,7 @@ class FaceView extends View implements Camera.PreviewCallback {
         canvas.drawText(s, (getWidth()-textWidth)/2, 20, paint);
 
         if (faces != null) {
-            paint.setStrokeWidth(2);
+            paint.setStrokeWidth(5);
             paint.setStyle(Paint.Style.STROKE);
             float scaleX = (float)getWidth()/grayImage.width();
             float scaleY = (float)getHeight()/grayImage.height();

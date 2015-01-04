@@ -62,7 +62,7 @@
             android:theme="@style/MenuTheme" />
 
         <activity
-            android:name=".FacePreview"
+            android:name=".MainActivity"
             android:theme="@style/AppTheme">
             <!--
             //<intent-filter>
