@@ -26,8 +26,7 @@
 <resources>
 
     <string name="app_name">Face Detection</string>
-    <string name="title_activity_live_card_service">LiveCard</string>
-    <string name="title_activity_main">OpenCV Face Detection</string>
+    <string name="title_activity_live_card_service">LiveCardFace</string>
     <string name="action_stop">Stop</string>
     <string name="action_facedet">Face Detection</string>
     <string name="hello_world">Touch to start!</string>

@@ -51,7 +51,7 @@ public class LiveCardMenuActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_facedet:
-                Intent faceDetAct = new Intent(this, MainActivity.class);
+                Intent faceDetAct = new Intent(this, FacePreview.class);
                 startActivity(faceDetAct);
                 return true;
             case R.id.action_stop:

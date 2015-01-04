@@ -1,1 +1,1 @@
-include ':openCVLibrary245', ':facedetection'
+include ':facedetection'

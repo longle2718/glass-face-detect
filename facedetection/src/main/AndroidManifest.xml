@@ -26,8 +26,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.longle1.facedetection" >
 
+    <uses-sdk
+        android:minSdkVersion="8"
+        android:targetSdkVersion="19" />
+
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
@@ -57,7 +62,7 @@
             android:theme="@style/MenuTheme" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".FacePreview"
             android:theme="@style/AppTheme">
             <!--
             //<intent-filter>
