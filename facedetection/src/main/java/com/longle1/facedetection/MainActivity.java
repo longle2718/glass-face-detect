@@ -34,22 +34,36 @@ import android.graphics.Paint;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.Toast;
+
+import com.loopj.android.http.RequestParams;
 
 import org.bytedeco.javacpp.Loader;
+import org.bytedeco.javacpp.avcodec;
+import org.bytedeco.javacpp.avutil;
 import org.bytedeco.javacpp.opencv_objdetect;
+import org.bytedeco.javacpp.swresample;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import static org.bytedeco.javacpp.opencv_core.CvMemStorage;
 import static org.bytedeco.javacpp.opencv_core.CvRect;
@@ -69,6 +83,7 @@ public class MainActivity extends Activity {
     private FrameLayout layout;
     private FaceView mFaceView;
     private CameraPreview mCameraPreview;
+    static boolean faceState = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +120,16 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvMemStorage storage;
     private CvSeq faces;
 
+    private FFmpegFrameRecorder recorder = null;
+
+    private Looper mAsyncHttpLooper;
+    private String targetURI = "https://acoustic.ifp.illinois.edu:8081";
+    private String db = "publicDb";
+    private String dev = "publicUser";
+    private String pwd = "publicPwd";
+
+    private String filename = null; // current/temp video filename
+
     public FaceView(MainActivity context) throws IOException {
         super(context);
 
@@ -134,8 +159,18 @@ class FaceView extends View implements Camera.PreviewCallback {
             throw new IOException("Could not load the classifier file.");
         }
         storage = CvMemStorage.create();
+
+        // Preload the module to work around a known bug in FFmpegFrameRecorder
+        Loader.load(swresample.class);
+
+        // Create looper for asyncHttp
+        HandlerThread thread2 = new HandlerThread("AsyncHttpResponseHandler",
+                android.os.Process.THREAD_PRIORITY_BACKGROUND);
+        mAsyncHttpLooper = thread2.getLooper();
+        thread2.start();
     }
 
+    @Override
     public void onPreviewFrame(final byte[] data, final Camera camera) {
         try {
             Size size = camera.getParameters().getPreviewSize();
@@ -168,6 +203,62 @@ class FaceView extends View implements Camera.PreviewCallback {
         cvClearMemStorage(storage);
         faces = cvHaarDetectObjects(grayImage, classifier, storage, 1.1, 3, CV_HAAR_DO_CANNY_PRUNING);
         postInvalidate();
+
+        // write frames to video
+        if (faces!=null) {
+            int total = faces.total();
+            if (total > 0) {
+                if (!MainActivity.faceState) {
+                    MainActivity.faceState = true;
+                    // create a new video
+                    try {
+                        File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+                        String path = folder.getAbsolutePath() + "/Camera/";
+                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+                        filename = path + formatter.format(new Date()) + ".mp4" ;
+                        recorder = new FFmpegFrameRecorder(filename, width, height);
+                        recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
+                        recorder.setFormat("mp4");
+                        //recorder.setFrameRate(15);
+                        //recorder.setVideoBitrate(30);
+                        recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
+                        recorder.start();
+
+                        Log.i("MainActivity", "recorder started");
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                // write a frame to the video track
+                try {
+                    recorder.record(grayImage);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            } else {
+                if (MainActivity.faceState) {
+                    MainActivity.faceState = false;
+                    // close the video track
+                    try {
+                        recorder.stop();
+                        Log.i("MainActivity", "recorder stopped");
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                    // send to the cloud
+                    RequestParams rpPut = new RequestParams();
+                    rpPut.put("user", dev);
+                    rpPut.put("passwd", pwd);
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // ISO8601 uses trailing Z
+                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                    String ts = sdf.format(new Date());
+                    rpPut.put("filename", ts+".mp4"); // name file using time stamp
+                    TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
+                    httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, filename);
+
+                }
+            }
+        }
     }
 
     @Override
@@ -223,7 +314,6 @@ class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
         } catch (IOException exception) {
             mCamera.release();
             mCamera = null;
-            // TODO: add more exception handling logic here
         }
     }
 
