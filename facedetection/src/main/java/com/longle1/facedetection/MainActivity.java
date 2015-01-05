@@ -54,6 +54,9 @@ import org.bytedeco.javacpp.avutil;
 import org.bytedeco.javacpp.opencv_objdetect;
 import org.bytedeco.javacpp.swresample;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -121,8 +124,9 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvSeq faces;
 
     private FFmpegFrameRecorder recorder = null;
-
     private Looper mAsyncHttpLooper;
+    private LocationData mLocationData;
+
     private String targetURI = "https://acoustic.ifp.illinois.edu:8081";
     private String db = "publicDb";
     private String dev = "publicUser";
@@ -168,6 +172,9 @@ class FaceView extends View implements Camera.PreviewCallback {
                 android.os.Process.THREAD_PRIORITY_BACKGROUND);
         mAsyncHttpLooper = thread2.getLooper();
         thread2.start();
+
+        // Create location
+        mLocationData = new LocationData(getContext());
     }
 
     @Override
@@ -204,6 +211,10 @@ class FaceView extends View implements Camera.PreviewCallback {
         faces = cvHaarDetectObjects(grayImage, classifier, storage, 1.1, 3, CV_HAAR_DO_CANNY_PRUNING);
         postInvalidate();
 
+        postProcessImage(width, height);
+    }
+
+    protected void postProcessImage(int width, int height){
         // write frames to video
         if (faces!=null) {
             int total = faces.total();
@@ -216,7 +227,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                         String path = folder.getAbsolutePath() + "/Camera/";
                         //SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
                         //filename = path + formatter.format(new Date()) + ".mp4" ;
-                        filename = path + 'tmp' + ".mp4" ;
+                        filename = path + "tmp" + ".mp4" ;
                         recorder = new FFmpegFrameRecorder(filename, width, height);
                         recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
                         recorder.setFormat("mp4");
@@ -246,7 +257,8 @@ class FaceView extends View implements Camera.PreviewCallback {
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
-                    // send to the cloud
+
+                    // *** Send video
                     RequestParams rpPut = new RequestParams();
                     rpPut.put("user", dev);
                     rpPut.put("passwd", pwd);
@@ -257,6 +269,42 @@ class FaceView extends View implements Camera.PreviewCallback {
                     TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
                     httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, filename);
 
+                    // *** Send metadata
+                    // prepare record date json
+                    JSONObject recordDate = new JSONObject();
+                    try{
+                        recordDate.put("$date", ts);
+                    } catch (JSONException e){
+                        e.printStackTrace();
+                    }
+                    // prepare location json
+                    JSONObject location = new JSONObject();
+                    try{
+                        location.put("type", "Point");
+                        JSONArray coord = new JSONArray();
+                        coord.put(mLocationData.getLongtitude());
+                        coord.put(mLocationData.getLatitude());
+                        location.put("coordinates", coord);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    // putting it together
+                    JSONObject json = new JSONObject();
+                    try{
+                        json.put("filename", ts+".mp4");
+                        json.put("recordDate", recordDate);
+                        json.put("location", location);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                    RequestParams rpPost = new RequestParams();
+                    rpPost.put("dbname", db);
+                    rpPost.put("colname", "v_event");
+                    rpPost.put("user", dev);
+                    rpPost.put("passwd", pwd);
+                    TimedAsyncHttpResponseHandler httpHandler2= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
+                    httpHandler2.executePut(targetURI+"/write", rpPost, json);
                 }
             }
         }
