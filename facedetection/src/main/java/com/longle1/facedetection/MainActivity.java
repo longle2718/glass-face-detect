@@ -124,6 +124,8 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvSeq faces;
 
     private FFmpegFrameRecorder recorder = null;
+    private String filePath = null; // path of the temp video file
+    private long startTime = 0;
     private Looper mAsyncHttpLooper;
     private LocationData mLocationData;
 
@@ -131,8 +133,6 @@ class FaceView extends View implements Camera.PreviewCallback {
     private String db = "publicDb";
     private String dev = "publicUser";
     private String pwd = "publicPwd";
-
-    private String filename = null; // current/temp video filename
 
     public FaceView(MainActivity context) throws IOException {
         super(context);
@@ -173,6 +173,10 @@ class FaceView extends View implements Camera.PreviewCallback {
         mAsyncHttpLooper = thread2.getLooper();
         thread2.start();
 
+        // temp video file
+        File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        filePath = folder.getAbsolutePath() + "/Camera/" + "tmp" + ".mp4" ;
+
         // Create location
         mLocationData = new LocationData(getContext());
     }
@@ -211,10 +215,12 @@ class FaceView extends View implements Camera.PreviewCallback {
         faces = cvHaarDetectObjects(grayImage, classifier, storage, 1.1, 3, CV_HAAR_DO_CANNY_PRUNING);
         postInvalidate();
 
-        postProcessImage(width, height);
+        postProcessImage(data, width, height);
     }
 
-    protected void postProcessImage(int width, int height){
+    protected void postProcessImage(byte[] data, int width, int height){
+        long duration = 0;
+
         // write frames to video
         if (faces!=null) {
             int total = faces.total();
@@ -223,18 +229,15 @@ class FaceView extends View implements Camera.PreviewCallback {
                     MainActivity.faceState = true;
                     // create a new video
                     try {
-                        File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
-                        String path = folder.getAbsolutePath() + "/Camera/";
-                        //SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
-                        //filename = path + formatter.format(new Date()) + ".mp4" ;
-                        filename = path + "tmp" + ".mp4" ;
-                        recorder = new FFmpegFrameRecorder(filename, width, height);
+                        recorder = new FFmpegFrameRecorder(filePath, width, height);
                         recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
                         recorder.setFormat("mp4");
                         //recorder.setFrameRate(15);
                         //recorder.setVideoBitrate(30);
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
+
                         recorder.start();
+                        startTime = System.currentTimeMillis();
 
                         Log.i("MainActivity", "recorder started");
                     } catch (Exception ex) {
@@ -242,8 +245,10 @@ class FaceView extends View implements Camera.PreviewCallback {
                     }
                 }
                 // write a frame to the video track
+                IplImage yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
+                yuvIplimage.getByteBuffer().put(data);
                 try {
-                    recorder.record(grayImage);
+                    recorder.record(yuvIplimage);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -253,6 +258,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                     // close the video track
                     try {
                         recorder.stop();
+                        duration = System.currentTimeMillis() - startTime;
                         Log.i("MainActivity", "recorder stopped");
                     } catch (Exception ex) {
                         ex.printStackTrace();
@@ -267,7 +273,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                     String ts = sdf.format(new Date());
                     rpPut.put("filename", ts+".mp4"); // name file using time stamp
                     TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
-                    httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, filename);
+                    httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, filePath);
 
                     // *** Send metadata
                     // prepare record date json
@@ -294,6 +300,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                         json.put("filename", ts+".mp4");
                         json.put("recordDate", recordDate);
                         json.put("location", location);
+                        json.put("duration", duration); // in milliseconds
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
