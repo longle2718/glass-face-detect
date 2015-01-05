@@ -214,8 +214,9 @@ class FaceView extends View implements Camera.PreviewCallback {
                     try {
                         File folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
                         String path = folder.getAbsolutePath() + "/Camera/";
-                        SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
-                        filename = path + formatter.format(new Date()) + ".mp4" ;
+                        //SimpleDateFormat formatter = new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
+                        //filename = path + formatter.format(new Date()) + ".mp4" ;
+                        filename = path + 'tmp' + ".mp4" ;
                         recorder = new FFmpegFrameRecorder(filename, width, height);
                         recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
                         recorder.setFormat("mp4");
