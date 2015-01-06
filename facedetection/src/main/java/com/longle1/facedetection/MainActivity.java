@@ -232,8 +232,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                         recorder = new FFmpegFrameRecorder(filePath, width, height);
                         recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
                         recorder.setFormat("mp4");
-                        //recorder.setFrameRate(15);
-                        //recorder.setVideoBitrate(30);
+                        recorder.setFrameRate(30);
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
 
                         recorder.start();
