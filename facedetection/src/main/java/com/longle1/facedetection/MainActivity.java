@@ -237,10 +237,9 @@ class FaceView extends View implements Camera.PreviewCallback {
 
                         recorder.start();
                         startTime = System.currentTimeMillis();
-
                         Log.i("MainActivity", "recorder started");
                     } catch (Exception ex) {
-                        ex.printStackTrace();
+                        throw new RuntimeException(ex.getMessage());
                     }
                 }
                 // write a frame to the video track
@@ -253,7 +252,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                     }
                     recorder.record(yuvIplimage);
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    throw new RuntimeException(ex.getMessage());
                 }
             } else {
                 if (MainActivity.faceState) {
@@ -264,57 +263,59 @@ class FaceView extends View implements Camera.PreviewCallback {
                         duration = System.currentTimeMillis() - startTime;
                         Log.i("MainActivity", "recorder stopped");
                     } catch (Exception ex) {
-                        ex.printStackTrace();
+                        throw new RuntimeException(ex.getMessage());
                     }
 
-                    // *** Send video
-                    RequestParams rpPut = new RequestParams();
-                    rpPut.put("user", dev);
-                    rpPut.put("passwd", pwd);
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // ISO8601 uses trailing Z
-                    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-                    String ts = sdf.format(new Date());
-                    rpPut.put("filename", ts+".mp4"); // name file using time stamp
-                    TimedAsyncHttpResponseHandler httpHandler1= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
-                    httpHandler1.executePut(targetURI+"/gridfs/"+db+"/v_data", rpPut, filePath);
+                    if (duration > 1000) {
+                        // *** Send video
+                        RequestParams rpPut = new RequestParams();
+                        rpPut.put("user", dev);
+                        rpPut.put("passwd", pwd);
+                        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"); // ISO8601 uses trailing Z
+                        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                        String ts = sdf.format(new Date());
+                        rpPut.put("filename", ts + ".mp4"); // name file using time stamp
+                        TimedAsyncHttpResponseHandler httpHandler1 = new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
+                        httpHandler1.executePut(targetURI + "/gridfs/" + db + "/v_data", rpPut, filePath);
 
-                    // *** Send metadata
-                    // prepare record date json
-                    JSONObject recordDate = new JSONObject();
-                    try{
-                        recordDate.put("$date", ts);
-                    } catch (JSONException e){
-                        e.printStackTrace();
-                    }
-                    // prepare location json
-                    JSONObject location = new JSONObject();
-                    try{
-                        location.put("type", "Point");
-                        JSONArray coord = new JSONArray();
-                        coord.put(mLocationData.getLongtitude());
-                        coord.put(mLocationData.getLatitude());
-                        location.put("coordinates", coord);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    // putting it together
-                    JSONObject json = new JSONObject();
-                    try{
-                        json.put("filename", ts+".mp4");
-                        json.put("recordDate", recordDate);
-                        json.put("location", location);
-                        json.put("duration", duration); // in milliseconds
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
+                        // *** Send metadata
+                        // prepare record date json
+                        JSONObject recordDate = new JSONObject();
+                        try {
+                            recordDate.put("$date", ts);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        // prepare location json
+                        JSONObject location = new JSONObject();
+                        try {
+                            location.put("type", "Point");
+                            JSONArray coord = new JSONArray();
+                            coord.put(mLocationData.getLongtitude());
+                            coord.put(mLocationData.getLatitude());
+                            location.put("coordinates", coord);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        // putting it together
+                        JSONObject json = new JSONObject();
+                        try {
+                            json.put("filename", ts + ".mp4");
+                            json.put("recordDate", recordDate);
+                            json.put("location", location);
+                            json.put("duration", duration); // in milliseconds
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
 
-                    RequestParams rpPost = new RequestParams();
-                    rpPost.put("dbname", db);
-                    rpPost.put("colname", "v_event");
-                    rpPost.put("user", dev);
-                    rpPost.put("passwd", pwd);
-                    TimedAsyncHttpResponseHandler httpHandler2= new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
-                    httpHandler2.executePut(targetURI+"/write", rpPost, json);
+                        RequestParams rpPost = new RequestParams();
+                        rpPost.put("dbname", db);
+                        rpPost.put("colname", "v_event");
+                        rpPost.put("user", dev);
+                        rpPost.put("passwd", pwd);
+                        TimedAsyncHttpResponseHandler httpHandler2 = new TimedAsyncHttpResponseHandler(mAsyncHttpLooper, getContext());
+                        httpHandler2.executePut(targetURI + "/write", rpPost, json);
+                    }
                 }
             }
         }
