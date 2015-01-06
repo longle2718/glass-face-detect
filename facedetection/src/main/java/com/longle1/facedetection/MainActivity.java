@@ -247,6 +247,10 @@ class FaceView extends View implements Camera.PreviewCallback {
                 IplImage yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
                 yuvIplimage.getByteBuffer().put(data);
                 try {
+                    long t = 1000 * (System.currentTimeMillis() - startTime);
+                    if (t > recorder.getTimestamp()) {
+                        recorder.setTimestamp(t);
+                    }
                     recorder.record(yuvIplimage);
                 } catch (Exception ex) {
                     ex.printStackTrace();
