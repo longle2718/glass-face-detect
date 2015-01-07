@@ -114,6 +114,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy(){
+        Log.i("MainActivity", "onDestroy");
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mFaceView.stopFaceView();
         super.onDestroy();
@@ -142,7 +143,7 @@ class FaceView extends View implements Camera.PreviewCallback {
     private FFmpegFrameRecorder recorder = null;
     private String filePath = null; // path of the temp video file
     private long startTime = 0;
-    private int count = 0;
+    private int count = 0; // Count the number of time "record" was called
     private Looper mAsyncHttpLooper;
     private LocationData mLocationData;
 
