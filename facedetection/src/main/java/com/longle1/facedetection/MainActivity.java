@@ -292,7 +292,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                     try {
                         recorder.stop();
                         duration = System.currentTimeMillis() - startTime;
-                        Log.i("MainActivity", "recorder stopped");
+                        Log.i("MainActivity", "recorder stopped: "+String.valueOf(count)+" frames");
                     } catch (Exception ex) {
                         throw new RuntimeException(ex.getMessage());
                     }

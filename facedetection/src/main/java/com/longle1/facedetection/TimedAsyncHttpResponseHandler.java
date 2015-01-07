@@ -49,7 +49,7 @@ public class TimedAsyncHttpResponseHandler extends AsyncHttpResponseHandler{
 	@Override
 	public void onFailure(int statusCode, Header[] headers, byte[] responseBody,
 			Throwable error) {
-		Log.e("RTT: ", String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms");
+		Log.e("RTT", String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms");
 		String msg = "RTT: "+ String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms";
 		Toast mToast = Toast.makeText(mContext, msg, Toast.LENGTH_SHORT);
 		mToast.setGravity(Gravity.TOP, 0, 0);
@@ -59,7 +59,7 @@ public class TimedAsyncHttpResponseHandler extends AsyncHttpResponseHandler{
 	}
 	@Override
 	public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-		Log.i("RTT: ", String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms");
+		Log.i("RTT", String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms");
 		String msg = "RTT: "+ String.format("%.1f", (System.nanoTime()-startTime)/1e6)+" ms";
 		Toast mToast = Toast.makeText(mContext, msg, Toast.LENGTH_SHORT);
         mToast.setGravity(Gravity.TOP, 0, 0);
