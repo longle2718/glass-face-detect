@@ -134,6 +134,7 @@ public class MainActivity extends Activity {
 
 class FaceView extends View implements Camera.PreviewCallback {
     public static final int SUBSAMPLING_FACTOR = 4;
+    public static final int VIDEO_FPS = 2;
 
     private IplImage grayImage;
     private CvHaarClassifierCascade classifier;
@@ -141,9 +142,9 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvSeq faces;
 
     private FFmpegFrameRecorder recorder = null;
+    IplImage yuvIplimage = null;
     private String filePath = null; // path of the temp video file
     private long startTime = 0;
-    private int count = 0; // Count the number of time "record" was called
     private Looper mAsyncHttpLooper;
     private LocationData mLocationData;
 
@@ -261,38 +262,43 @@ class FaceView extends View implements Camera.PreviewCallback {
                         recorder = new FFmpegFrameRecorder(filePath, width, height);
                         recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
                         recorder.setFormat("mp4");
-                        recorder.setFrameRate(30);
+                        recorder.setFrameRate(VIDEO_FPS);
+                        recorder.setVideoBitrate(16384);
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
 
+                        yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
+
+                        Log.i("MainActivity", "recorder started");
                         recorder.start();
                         startTime = System.currentTimeMillis();
-                        count = 0;
-                        Log.i("MainActivity", "recorder started");
                     } catch (Exception ex) {
                         throw new RuntimeException(ex.getMessage());
                     }
                 }
                 // write a frame to the video track
-                IplImage yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
-                yuvIplimage.getByteBuffer().put(data);
-                try {
-                    long t = 1000 * (System.currentTimeMillis() - startTime);
-                    if (t > recorder.getTimestamp()) {
-                        recorder.setTimestamp(t);
+                if (yuvIplimage != null) {
+                    yuvIplimage.getByteBuffer().put(data);
+
+                    try {
+                        // Regulate recording rate
+                        long t = 1000 * (System.currentTimeMillis() - startTime);
+                        if (t > recorder.getTimestamp()) {
+                            recorder.record(yuvIplimage); // the new frame will have the timestamp of the next epoch
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
-                    recorder.record(yuvIplimage);
-                    count++;
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex.getMessage());
                 }
             } else {
                 if (MainActivity.faceState) {
                     MainActivity.faceState = false;
                     // close the video track
                     try {
-                        recorder.stop();
                         duration = System.currentTimeMillis() - startTime;
-                        Log.i("MainActivity", "recorder stopped: "+String.valueOf(count)+" frames");
+                        // logging must be called before stop otherwise getFrameNumber returns 0
+                        Log.i("MainActivity", "recorder stopped: "+String.valueOf(recorder.getFrameNumber())+" frames, "+String.valueOf(duration)+" ms");
+                        recorder.stop();
+                        recorder.release();
                     } catch (Exception ex) {
                         throw new RuntimeException(ex.getMessage());
                     }
