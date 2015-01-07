@@ -111,6 +111,11 @@ public class MainActivity extends Activity {
             new AlertDialog.Builder(this).setMessage(e.getMessage()).create().show();
         }
     }
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
 }
 
 // ----------------------------------------------------------------------
