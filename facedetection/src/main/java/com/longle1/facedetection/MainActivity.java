@@ -38,13 +38,13 @@ import android.os.Environment;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-import android.widget.Toast;
 
 import com.loopj.android.http.RequestParams;
 
@@ -179,6 +179,21 @@ class FaceView extends View implements Camera.PreviewCallback {
 
         // Create location
         mLocationData = new LocationData(getContext());
+    }
+
+    @Override
+    public boolean onTouchEvent (MotionEvent event){
+        cvClearMemStorage(storage);
+        mLocationData.stopLocationData();
+        try {
+            recorder.stop();
+            recorder.release();
+        }
+        catch (Exception ex){
+            ex.printStackTrace();
+        }
+        performClick();
+        return true;
     }
 
     @Override
