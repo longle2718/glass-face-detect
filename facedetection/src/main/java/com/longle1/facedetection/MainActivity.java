@@ -111,10 +111,21 @@ public class MainActivity extends Activity {
             new AlertDialog.Builder(this).setMessage(e.getMessage()).create().show();
         }
     }
+
     @Override
     protected void onDestroy(){
-        super.onDestroy();
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        mFaceView.stopFaceView();
+        super.onDestroy();
+    }
+
+    @Override
+    public boolean onKeyDown(int keycode, KeyEvent event) {
+        if (keycode == KeyEvent.KEYCODE_BACK) {
+            this.finish();
+            return true;
+        }
+        return super.onKeyDown(keycode, event);
     }
 }
 
@@ -131,6 +142,7 @@ class FaceView extends View implements Camera.PreviewCallback {
     private FFmpegFrameRecorder recorder = null;
     private String filePath = null; // path of the temp video file
     private long startTime = 0;
+    private int count = 0;
     private Looper mAsyncHttpLooper;
     private LocationData mLocationData;
 
@@ -186,22 +198,15 @@ class FaceView extends View implements Camera.PreviewCallback {
         mLocationData = new LocationData(getContext());
     }
 
-    @Override
-    public boolean onKeyDown(int keycode, KeyEvent event) {
-        if (keycode == KeyEvent.KEYCODE_BACK){
-            Log.i("onKeyDown", "KEYCODE_BACK");
-            cvClearMemStorage(storage);
-            mLocationData.stopLocationData();
-            try {
-                recorder.stop();
-                recorder.release();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-            performClick();
-            return true;
+    public void stopFaceView() {
+        cvClearMemStorage(storage);
+        mLocationData.stopLocationData();
+        try {
+            recorder.stop();
+            recorder.release();
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
-        return super.onKeyDown(keycode, event);
     }
 
     @Override
@@ -260,6 +265,7 @@ class FaceView extends View implements Camera.PreviewCallback {
 
                         recorder.start();
                         startTime = System.currentTimeMillis();
+                        count = 0;
                         Log.i("MainActivity", "recorder started");
                     } catch (Exception ex) {
                         throw new RuntimeException(ex.getMessage());
@@ -274,6 +280,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                         recorder.setTimestamp(t);
                     }
                     recorder.record(yuvIplimage);
+                    count++;
                 } catch (Exception ex) {
                     throw new RuntimeException(ex.getMessage());
                 }
