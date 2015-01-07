@@ -38,7 +38,7 @@ import android.os.Environment;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
-import android.view.MotionEvent;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -187,18 +187,21 @@ class FaceView extends View implements Camera.PreviewCallback {
     }
 
     @Override
-    public boolean onTouchEvent (MotionEvent event){
-        cvClearMemStorage(storage);
-        mLocationData.stopLocationData();
-        try {
-            recorder.stop();
-            recorder.release();
+    public boolean onKeyDown(int keycode, KeyEvent event) {
+        if (keycode == KeyEvent.KEYCODE_BACK){
+            Log.i("onKeyDown", "KEYCODE_BACK");
+            cvClearMemStorage(storage);
+            mLocationData.stopLocationData();
+            try {
+                recorder.stop();
+                recorder.release();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            performClick();
+            return true;
         }
-        catch (Exception ex){
-            ex.printStackTrace();
-        }
-        performClick();
-        return true;
+        return super.onKeyDown(keycode, event);
     }
 
     @Override
