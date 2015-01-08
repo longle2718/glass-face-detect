@@ -263,6 +263,7 @@ class FaceView extends View implements Camera.PreviewCallback {
                         recorder.setFormat("mp4");
                         recorder.setFrameRate(VIDEO_FPS);
                         recorder.setVideoQuality(0); // maximum quality
+                        recorder.setVideoOption("preset", "veryfast");
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
 
                         Log.i("MainActivity", "recorder started");
