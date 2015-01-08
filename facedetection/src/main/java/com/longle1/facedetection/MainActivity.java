@@ -142,7 +142,6 @@ class FaceView extends View implements Camera.PreviewCallback {
     private CvSeq faces;
 
     private FFmpegFrameRecorder recorder = null;
-    IplImage yuvIplimage = null;
     private String filePath = null; // path of the temp video file
     private long startTime = 0;
     private Looper mAsyncHttpLooper;
@@ -260,13 +259,11 @@ class FaceView extends View implements Camera.PreviewCallback {
                     // create a new video
                     try {
                         recorder = new FFmpegFrameRecorder(filePath, width, height);
-                        recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
+                        recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
                         recorder.setFormat("mp4");
                         recorder.setFrameRate(VIDEO_FPS);
                         recorder.setVideoBitrate(16384);
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
-
-                        yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
 
                         Log.i("MainActivity", "recorder started");
                         recorder.start();
@@ -276,18 +273,15 @@ class FaceView extends View implements Camera.PreviewCallback {
                     }
                 }
                 // write a frame to the video track
-                if (yuvIplimage != null) {
-                    yuvIplimage.getByteBuffer().put(data);
-
-                    try {
-                        // Regulate recording rate
-                        long t = 1000 * (System.currentTimeMillis() - startTime);
-                        if (t > recorder.getTimestamp()) {
-                            recorder.record(yuvIplimage); // the new frame will have the timestamp of the next epoch
-                        }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
+                try {
+                    long t = 1000 * (System.currentTimeMillis() - startTime);
+                    if (t > recorder.getTimestamp()) {
+                        IplImage yuvIplimage = IplImage.create(width, height, IPL_DEPTH_8U, 2);
+                        yuvIplimage.getByteBuffer().put(data);
+                        recorder.record(yuvIplimage); // the new frame will have the timestamp of the next epoch
                     }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             } else {
                 if (MainActivity.faceState) {
