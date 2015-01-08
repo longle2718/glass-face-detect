@@ -134,7 +134,7 @@ public class MainActivity extends Activity {
 
 class FaceView extends View implements Camera.PreviewCallback {
     public static final int SUBSAMPLING_FACTOR = 4;
-    public static final int VIDEO_FPS = 2;
+    public static final int VIDEO_FPS = 10;
 
     private IplImage grayImage;
     private CvHaarClassifierCascade classifier;
@@ -259,10 +259,10 @@ class FaceView extends View implements Camera.PreviewCallback {
                     // create a new video
                     try {
                         recorder = new FFmpegFrameRecorder(filePath, width, height);
-                        recorder.setVideoCodec(avcodec.AV_CODEC_ID_MPEG4);
+                        recorder.setVideoCodec(avcodec.AV_CODEC_ID_H264);
                         recorder.setFormat("mp4");
                         recorder.setFrameRate(VIDEO_FPS);
-                        recorder.setVideoBitrate(16384);
+                        recorder.setVideoQuality(0); // maximum quality
                         recorder.setPixelFormat(avutil.AV_PIX_FMT_YUV420P);
 
                         Log.i("MainActivity", "recorder started");
