@@ -84,7 +84,7 @@ import static org.bytedeco.javacpp.opencv_objdetect.cvHaarDetectObjects;
 
 public class MainActivity extends Activity {
     private FrameLayout layout;
-    private FaceView mFaceView;
+    private FaceDetect mFaceDetect;
     private CameraPreview mCameraPreview;
     static boolean faceState = false;
 
@@ -101,10 +101,10 @@ public class MainActivity extends Activity {
         // Create our Preview view and set it as the content of our activity.
         try {
             layout = new FrameLayout(this);
-            mFaceView = new FaceView(this);
-            mCameraPreview = new CameraPreview(this, mFaceView);
+            mFaceDetect = new FaceDetect(this);
+            mCameraPreview = new CameraPreview(this, mFaceDetect);
             layout.addView(mCameraPreview);
-            layout.addView(mFaceView);
+            layout.addView(mFaceDetect);
             setContentView(layout);
         } catch (IOException e) {
             e.printStackTrace();
@@ -116,7 +116,7 @@ public class MainActivity extends Activity {
     protected void onDestroy(){
         Log.i("MainActivity", "onDestroy");
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        mFaceView.stopFaceView();
+        mFaceDetect.stop();
         super.onDestroy();
     }
 
@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
 
 // ----------------------------------------------------------------------
 
-class FaceView extends View implements Camera.PreviewCallback {
+class FaceDetect extends View implements Camera.PreviewCallback {
     public static final int SUBSAMPLING_FACTOR = 4;
     public static final int VIDEO_FPS = 10;
 
@@ -152,7 +152,7 @@ class FaceView extends View implements Camera.PreviewCallback {
     private String dev = "publicUser";
     private String pwd = "publicPwd";
 
-    public FaceView(MainActivity context) throws IOException {
+    public FaceDetect(MainActivity context) throws IOException {
         super(context);
 
         // Create a private directory and file
@@ -199,7 +199,7 @@ class FaceView extends View implements Camera.PreviewCallback {
         mLocationData = new LocationData(getContext());
     }
 
-    public void stopFaceView() {
+    public void stop() {
         cvClearMemStorage(storage);
         mLocationData.stopLocationData();
         try {
